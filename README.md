@@ -1,58 +1,120 @@
 # forum-watch-bot
 
-一个使用 Go 编写的 Telegram 论坛新帖监控机器人。
+一个使用 Go 编写的 Telegram 论坛新帖监控机器人，支持三站 RSS 监控、Telegram 订阅和内置 Web 管理后台。
 
 ## 当前已完成
-- NodeLoc 新帖监控（可用）
+- Linux.do RSS 监控（可用）
+- NodeSeek 官方 RSS 监控（可用）
+- NodeLoc RSS 监控（可用）
 - Telegram 用户自助订阅
-- 支持站点 + 分类ID + 标签 + 关键词表达式订阅
+- 交互式订阅向导（/sub 后逐步录入）
+- 支持站点 + 分类ID(备注) + 标签 + 关键词表达式订阅
 - 普通用户每日推送次数限制
 - 推送到固定 Telegram 频道
 - SQLite 本地存储
-- Linux.do / NodeSeek 适配器接口预留
+- 代理支持（HTTP / SOCKS5）
+- 交互式 TG 主菜单按钮
+- Dockerfile
+- systemd service 示例
+- 内置 Web 管理后台（Basic Auth）
 
-## 为什么 Linux.do / NodeSeek 现在没有默认启用
-当前构建环境下，这两个站点都被 Cloudflare `403 Just a moment...` 挡住，无法做出“已验证可用”的默认抓取实现。
-因此本版本：
-- **NodeLoc 可直接工作**
-- **Linux.do / NodeSeek 提供适配器占位与配置说明**
-- 后续只要补 cookie / 代理 / 可用 JSON 源即可接上
+## 当前实测可用 RSS 源
+- `https://linux.do/latest.rss`
+- `https://rss.nodeseek.com`
+- `https://www.nodeloc.com/latest.rss`
 
-## 订阅命令
+## Telegram 命令
 ```bash
+/start
+/help
+/site
+/quota
+/admin
+/sub
 /sub site categoryID label keywordExpr
 /list
 /del id
+/cancel
 ```
 
-示例：
-```bash
-/sub nodeloc 6 VPS优惠 #t香港,9929,-已出
+## Web 后台
+启用配置：
+```json
+"web": {
+  "enabled": true,
+  "listen": ":8080",
+  "username": "admin",
+  "password": "change-me"
+}
 ```
 
-## 关键词语法
-参考了 `IonRh/TGBot_RSS` 项目的关键词思路，并按本项目需求裁剪：
-- 英文逗号分隔多个关键词
-- `-关键词` 表示屏蔽词
-- `*` 通配任意字符
-- `#t` 只匹配标题
-- `#c` 只匹配摘要/内容
-- `#a` 匹配标题和内容
+功能：
+- 首页状态面板
+- 全部订阅列表
+- Web 新增订阅
+- Web 删除订阅
+- Basic Auth 保护
 
-## 配置
-复制 `config.example.json` 为 `config.json` 并填写：
-- Telegram bot token
-- 推送频道 ID
-- 管理员用户 ID
-
-## 运行
+访问：
 ```bash
-./forum-watch-bot ./config.json
+http://服务器IP:8080
+```
+
+## 交互式订阅
+直接发送：
+```bash
+/sub
+```
+机器人会依次询问：
+1. site
+2. categoryID（RSS 模式下仅作备注，通常填 0）
+3. label
+4. keywordExpr
+
+任意步骤可发送：
+```bash
+/cancel
+```
+取消当前向导。
+
+## 直接订阅示例
+```bash
+/sub linuxdo 0 社区热帖 #t甲骨文,ARM,-已出
+/sub nodeseek 0 NS优惠 #t杜甫,9929,-已出
+/sub nodeloc 0 NL热帖 #t香港,9929,-已出
+```
+
+## Docker
+```bash
+docker build \
+  --build-arg ALL_PROXY=socks5://127.0.0.1:20170 \
+  --build-arg HTTP_PROXY=socks5://127.0.0.1:20170 \
+  --build-arg HTTPS_PROXY=socks5://127.0.0.1:20170 \
+  -t forum-watch-bot .
+
+docker run -d --name forum-watch-bot \
+  -p 8080:8080 \
+  -v $(pwd)/config.json:/app/config.json \
+  -v $(pwd)/data:/app \
+  forum-watch-bot
+```
+
+## systemd
+示例文件：
+- `forum-watch-bot.service`
+
+部署示例：
+```bash
+cp forum-watch-bot /opt/forum-watch-bot/
+cp config.json /opt/forum-watch-bot/
+cp forum-watch-bot.service /etc/systemd/system/
+systemctl daemon-reload
+systemctl enable --now forum-watch-bot
 ```
 
 ## 构建
 ```bash
-go build -ldflags "-X main.version=v0.1.0 -X main.commit=$(git rev-parse --short HEAD) -X main.buildTime=$(date -u +%FT%TZ)" -o forum-watch-bot ./cmd/forum-watch-bot
+go build -ldflags "-X main.version=v0.9.0 -X main.commit=$(git rev-parse --short HEAD) -X main.buildTime=$(date -u +%FT%TZ)" -o forum-watch-bot ./cmd/forum-watch-bot
 ```
 
 ## 说明
@@ -60,4 +122,4 @@ go build -ldflags "-X main.version=v0.1.0 -X main.commit=$(git rev-parse --short
 - https://github.com/IonRh/TGBot_RSS
 
 该项目许可证：Boost Software License 1.0。
-本仓库未原样复制其代码结构作为最终成品说明页，而是基于你的需求做了论坛新帖监控的独立实现与裁剪。
+本版本已包含可用的最小 Web 后台，并保留 TG 与 Docker/systemd 部署链。

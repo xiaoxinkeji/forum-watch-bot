@@ -10,6 +10,7 @@ type Config struct {
 	Telegram TelegramConfig `json:"telegram"`
 	Admin    AdminConfig    `json:"admin"`
 	Runtime  RuntimeConfig  `json:"runtime"`
+	Web      WebConfig      `json:"web"`
 	Sites    []SiteConfig   `json:"sites"`
 }
 
@@ -23,9 +24,17 @@ type AdminConfig struct {
 }
 
 type RuntimeConfig struct {
-	PollIntervalSeconds int `json:"poll_interval_seconds"`
-	DailyPushLimit      int `json:"daily_push_limit"`
+	PollIntervalSeconds int    `json:"poll_interval_seconds"`
+	DailyPushLimit      int    `json:"daily_push_limit"`
 	DatabasePath        string `json:"database_path"`
+	ProxyURL            string `json:"proxy_url"`
+}
+
+type WebConfig struct {
+	Enabled  bool   `json:"enabled"`
+	Listen   string `json:"listen"`
+	Username string `json:"username"`
+	Password string `json:"password"`
 }
 
 type SiteConfig struct {
@@ -57,6 +66,14 @@ func Load(path string) (*Config, error) {
 	}
 	if cfg.Runtime.DatabasePath == "" {
 		cfg.Runtime.DatabasePath = "forum-watch-bot.db"
+	}
+	if cfg.Web.Enabled {
+		if cfg.Web.Listen == "" {
+			cfg.Web.Listen = ":8080"
+		}
+		if cfg.Web.Username == "" || cfg.Web.Password == "" {
+			return nil, fmt.Errorf("web.username and web.password are required when web.enabled=true")
+		}
 	}
 	return &cfg, nil
 }

@@ -38,9 +38,6 @@ func (w *Watcher) RunOnce() error {
 				if !sub.Enabled || sub.Site != string(topic.Site) {
 					continue
 				}
-				if sub.CategoryID != 0 && sub.CategoryID != topic.CategoryID {
-					continue
-				}
 				ok, matchText := matches(topic, sub.KeywordExpr)
 				if !ok {
 					continue
@@ -49,11 +46,11 @@ func (w *Watcher) RunOnce() error {
 				if err == nil && count >= w.Config.Runtime.DailyPushLimit && !w.BotIsAdmin(sub.UserID) {
 					continue
 				}
-				msg := fmt.Sprintf("<b>%s</b>\n站点: %s\n分类ID: %d\n标签: %s\n匹配: %s\n%s", topic.Title, topic.Site, topic.CategoryID, sub.Label, matchText, topic.URL)
+				msg := fmt.Sprintf("<b>%s</b>\n站点: %s\n订阅标签: %s\n匹配: %s\n%s", topic.Title, topic.Site, sub.Label, matchText, topic.URL)
 				w.Bot.SendToUser(sub.UserID, msg)
 				_ = w.Store.AddPushLog(sub.UserID, topic.URL)
 			}
-			channelMsg := fmt.Sprintf("<b>%s</b>\n站点: %s\n分类ID: %d\n%s", topic.Title, topic.Site, topic.CategoryID, topic.URL)
+			channelMsg := fmt.Sprintf("<b>%s</b>\n站点: %s\n%s", topic.Title, topic.Site, topic.URL)
 			w.Bot.SendToChannel(channelMsg)
 			_ = w.Store.MarkSeen(string(topic.Site), topic.ExternalID, topic.Title, topic.URL, topic.PublishedAt)
 		}

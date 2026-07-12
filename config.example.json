@@ -9,11 +9,18 @@
   "runtime": {
     "poll_interval_seconds": 120,
     "daily_push_limit": 10,
-    "database_path": "forum-watch-bot.db"
+    "database_path": "forum-watch-bot.db",
+    "proxy_url": "socks5://127.0.0.1:20170"
+  },
+  "web": {
+    "enabled": true,
+    "listen": ":8080",
+    "username": "admin",
+    "password": "change-me"
   },
   "sites": [
-    {"id": "nodeloc", "enabled": true, "options": {}},
-    {"id": "linuxdo", "enabled": false, "options": {"note": "requires cookie/proxy due to Cloudflare 403"}},
-    {"id": "nodeseek", "enabled": false, "options": {"note": "requires cookie/proxy due to Cloudflare 403"}}
+    {"id": "linuxdo", "enabled": true, "options": {"rss_url": "https://linux.do/latest.rss"}},
+    {"id": "nodeseek", "enabled": true, "options": {"rss_url": "https://rss.nodeseek.com"}},
+    {"id": "nodeloc", "enabled": true, "options": {"rss_url": "https://www.nodeloc.com/latest.rss"}}
   ]
 }

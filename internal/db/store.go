@@ -13,6 +13,12 @@ type Store struct {
 	DB *sql.DB
 }
 
+type DashboardStats struct {
+	SubscriptionCount int
+	SeenTopicCount    int
+	TodayPushCount    int
+}
+
 func Open(path string) (*Store, error) {
 	db, err := sql.Open("sqlite3", path)
 	if err != nil {
@@ -143,6 +149,15 @@ func (s *Store) CountUserPushesToday(userID int64) (int, error) {
 func (s *Store) AddPushLog(userID int64, topicURL string) error {
 	_, err := s.DB.Exec(`INSERT INTO push_logs(user_id, topic_url, pushed_at) VALUES(?,?,?)`, userID, topicURL, time.Now().Format(time.RFC3339))
 	return err
+}
+
+func (s *Store) GetDashboardStats() (DashboardStats, error) {
+	var st DashboardStats
+	_ = s.DB.QueryRow(`SELECT COUNT(1) FROM user_subscriptions`).Scan(&st.SubscriptionCount)
+	_ = s.DB.QueryRow(`SELECT COUNT(1) FROM seen_topics`).Scan(&st.SeenTopicCount)
+	dayPrefix := time.Now().Format("2006-01-02")
+	_ = s.DB.QueryRow(`SELECT COUNT(1) FROM push_logs WHERE pushed_at LIKE ?`, dayPrefix+"%").Scan(&st.TodayPushCount)
+	return st, nil
 }
 
 func NormalizeCSVInt64(v string) []int64 {
