@@ -1,0 +1,19 @@
+{
+  "telegram": {
+    "bot_token": "REPLACE_ME",
+    "push_channel_id": -1000000000000
+  },
+  "admin": {
+    "admin_user_ids": [123456789]
+  },
+  "runtime": {
+    "poll_interval_seconds": 120,
+    "daily_push_limit": 10,
+    "database_path": "forum-watch-bot.db"
+  },
+  "sites": [
+    {"id": "nodeloc", "enabled": true, "options": {}},
+    {"id": "linuxdo", "enabled": false, "options": {"note": "requires cookie/proxy due to Cloudflare 403"}},
+    {"id": "nodeseek", "enabled": false, "options": {"note": "requires cookie/proxy due to Cloudflare 403"}}
+  ]
+}
