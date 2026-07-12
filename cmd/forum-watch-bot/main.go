@@ -38,10 +38,15 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	client, err := sites.NewHTTPClient(cfg.Runtime.ProxyURL)
-	if err != nil {
-		log.Fatal(err)
-	}
+	linuxCred, _ := store.GetSiteCredential("linuxdo")
+	nodeSeekCred, _ := store.GetSiteCredential("nodeseek")
+	nodeLocCred, _ := store.GetSiteCredential("nodeloc")
+	linuxClient, err := sites.NewHTTPClientWithOptions(sites.ClientOptions{ProxyURL: cfg.Runtime.ProxyURL, Cookie: linuxCred.Cookie, Headers: sites.ParseHeadersJSON(linuxCred.HeadersJSON)})
+	if err != nil { log.Fatal(err) }
+	nodeSeekClient, err := sites.NewHTTPClientWithOptions(sites.ClientOptions{ProxyURL: cfg.Runtime.ProxyURL, Cookie: nodeSeekCred.Cookie, Headers: sites.ParseHeadersJSON(nodeSeekCred.HeadersJSON)})
+	if err != nil { log.Fatal(err) }
+	nodeLocClient, err := sites.NewHTTPClientWithOptions(sites.ClientOptions{ProxyURL: cfg.Runtime.ProxyURL, Cookie: nodeLocCred.Cookie, Headers: sites.ParseHeadersJSON(nodeLocCred.HeadersJSON)})
+	if err != nil { log.Fatal(err) }
 	linuxRSS := "https://linux.do/latest.rss"
 	nodeSeekRSS := "https://rss.nodeseek.com"
 	nodeLocRSS := "https://www.nodeloc.com/latest.rss"
@@ -59,9 +64,9 @@ func main() {
 		}
 	}
 	fetchers := []model.SiteTopicFetcher{
-		sites.NewGenericRSSFetcher(client, model.SiteLinuxDO, linuxRSS),
-		sites.NewGenericRSSFetcher(client, model.SiteNodeSeek, nodeSeekRSS),
-		sites.NewGenericRSSFetcher(client, model.SiteNodeLoc, nodeLocRSS),
+		sites.NewGenericRSSFetcher(linuxClient, model.SiteLinuxDO, linuxRSS),
+		sites.NewGenericRSSFetcher(nodeSeekClient, model.SiteNodeSeek, nodeSeekRSS),
+		sites.NewGenericRSSFetcher(nodeLocClient, model.SiteNodeLoc, nodeLocRSS),
 	}
 	watcher := &service.Watcher{Store: store, Bot: bot, Config: cfg, Fetchers: fetchers}
 	go service.Loop(watcher)

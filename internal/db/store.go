@@ -19,6 +19,13 @@ type DashboardStats struct {
 	TodayPushCount    int
 }
 
+type SiteCredential struct {
+	Site      string
+	Cookie    string
+	HeadersJSON string
+	UpdatedAt time.Time
+}
+
 func Open(path string) (*Store, error) {
 	db, err := sql.Open("sqlite3", path)
 	if err != nil {
@@ -60,6 +67,12 @@ func (s *Store) migrate() error {
 			user_id INTEGER NOT NULL,
 			topic_url TEXT NOT NULL,
 			pushed_at TEXT NOT NULL
+		);`,
+		`CREATE TABLE IF NOT EXISTS site_credentials (
+			site TEXT PRIMARY KEY,
+			cookie TEXT NOT NULL DEFAULT '',
+			headers_json TEXT NOT NULL DEFAULT '{}',
+			updated_at TEXT NOT NULL
 		);`,
 	}
 	for _, stmt := range stmts {
@@ -158,6 +171,23 @@ func (s *Store) GetDashboardStats() (DashboardStats, error) {
 	dayPrefix := time.Now().Format("2006-01-02")
 	_ = s.DB.QueryRow(`SELECT COUNT(1) FROM push_logs WHERE pushed_at LIKE ?`, dayPrefix+"%").Scan(&st.TodayPushCount)
 	return st, nil
+}
+
+func (s *Store) GetSiteCredential(site string) (SiteCredential, error) {
+	var c SiteCredential
+	var updated string
+	err := s.DB.QueryRow(`SELECT site, cookie, headers_json, updated_at FROM site_credentials WHERE site=?`, site).Scan(&c.Site, &c.Cookie, &c.HeadersJSON, &updated)
+	if err == sql.ErrNoRows {
+		return SiteCredential{Site: site, HeadersJSON: "{}"}, nil
+	}
+	if err != nil { return c, err }
+	c.UpdatedAt, _ = time.Parse(time.RFC3339, updated)
+	return c, nil
+}
+
+func (s *Store) UpsertSiteCredential(site, cookie, headersJSON string) error {
+	_, err := s.DB.Exec(`INSERT INTO site_credentials(site, cookie, headers_json, updated_at) VALUES(?,?,?,?) ON CONFLICT(site) DO UPDATE SET cookie=excluded.cookie, headers_json=excluded.headers_json, updated_at=excluded.updated_at`, site, cookie, headersJSON, time.Now().Format(time.RFC3339))
+	return err
 }
 
 func NormalizeCSVInt64(v string) []int64 {

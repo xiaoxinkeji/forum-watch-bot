@@ -54,11 +54,17 @@
 - Web 新增订阅
 - Web 删除订阅
 - Basic Auth 保护
+- 站点登录配置页（保存 Cookie / Headers JSON）
 
 访问：
 ```bash
 http://服务器IP:8080
 ```
+
+站点登录态说明：
+- 在 `/credentials` 页面为 `linuxdo` / `nodeseek` / `nodeloc` 保存 Cookie
+- 如需要自定义请求头，可填写 `Headers JSON`
+- RSS 请求会自动携带已保存的 Cookie/Header
 
 ## 交互式订阅
 直接发送：
