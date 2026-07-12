@@ -55,6 +55,7 @@
 - Web 删除订阅
 - Basic Auth 保护
 - 站点登录配置页（保存 Cookie / Headers JSON）
+- Web 测试推送页面
 
 访问：
 ```bash

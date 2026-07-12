@@ -55,19 +55,23 @@ func mainKeyboard() tgbotapi.ReplyKeyboardMarkup {
 	return kb
 }
 
-func (b *Bot) send(chatID int64, text string) {
+func (b *Bot) send(chatID int64, text string) error {
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ParseMode = "HTML"
 	kb := mainKeyboard()
 	msg.ReplyMarkup = kb
-	_, _ = b.API.Send(msg)
+	_, err := b.API.Send(msg)
+	return err
 }
 
-func (b *Bot) SendToUser(userID int64, text string) { b.send(userID, text) }
-func (b *Bot) SendToChannel(text string) {
+func (b *Bot) SendToUser(userID int64, text string) {
+	_ = b.send(userID, text)
+}
+func (b *Bot) SendToChannel(text string) error {
 	msg := tgbotapi.NewMessage(b.ChannelID, text)
 	msg.ParseMode = "HTML"
-	_, _ = b.API.Send(msg)
+	_, err := b.API.Send(msg)
+	return err
 }
 
 func (b *Bot) helpText() string {

@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 	"time"
@@ -51,7 +52,11 @@ func (w *Watcher) RunOnce() error {
 				_ = w.Store.AddPushLog(sub.UserID, topic.URL)
 			}
 			channelMsg := fmt.Sprintf("<b>%s</b>\n站点: %s\n%s", topic.Title, topic.Site, topic.URL)
-			w.Bot.SendToChannel(channelMsg)
+			if err := w.Bot.SendToChannel(channelMsg); err != nil {
+				log.Printf("channel push failed: %v", err)
+			} else {
+				log.Printf("channel push ok: site=%s title=%s", topic.Site, topic.Title)
+			}
 			_ = w.Store.MarkSeen(string(topic.Site), topic.ExternalID, topic.Title, topic.URL, topic.PublishedAt)
 		}
 	}

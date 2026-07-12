@@ -33,7 +33,7 @@ func (s *Server) auth(next http.HandlerFunc) http.HandlerFunc {
 }
 
 func render(w http.ResponseWriter, title string, body template.HTML) {
-	tpl := `<!doctype html><html><head><meta charset="utf-8"><title>{{.Title}}</title><style>body{font-family:Arial,sans-serif;max-width:1000px;margin:40px auto;padding:0 16px}table{border-collapse:collapse;width:100%}th,td{border:1px solid #ddd;padding:8px}input,textarea,select{padding:8px;margin:4px 0;width:100%}a,button{padding:6px 10px}nav a{margin-right:12px}.card{padding:12px;border:1px solid #ddd;margin:12px 0}</style></head><body><nav><a href="/">首页</a><a href="/subscriptions">订阅</a><a href="/subscriptions/new">新增订阅</a><a href="/credentials">站点登录</a></nav><h1>{{.Title}}</h1>{{.Body}}</body></html>`
+	tpl := `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>{{.Title}}</title><style>:root{--bg:#0b1220;--panel:#121a2b;--muted:#94a3b8;--text:#e5e7eb;--line:#243041;--accent:#3b82f6;--good:#10b981}*{box-sizing:border-box}body{font-family:Inter,Arial,sans-serif;max-width:1100px;margin:0 auto;padding:24px 16px;background:var(--bg);color:var(--text)}table{border-collapse:collapse;width:100%;background:var(--panel);border-radius:12px;overflow:hidden}th,td{border-bottom:1px solid var(--line);padding:10px;text-align:left}th{background:#182235}input,textarea,select{padding:10px;margin:4px 0 12px;width:100%;background:#0f172a;color:var(--text);border:1px solid var(--line);border-radius:10px}a,button{padding:8px 12px;border-radius:10px;border:0;background:var(--accent);color:white;text-decoration:none;display:inline-block;cursor:pointer}nav{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}.card{padding:14px;border:1px solid var(--line);background:var(--panel);margin:12px 0;border-radius:14px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}.muted{color:var(--muted)}.ok{color:var(--good)}</style></head><body><nav><a href="/">首页</a><a href="/subscriptions">订阅</a><a href="/subscriptions/new">新增订阅</a><a href="/credentials">站点登录</a><a href="/test-push">测试推送</a></nav><h1>{{.Title}}</h1>{{.Body}}</body></html>`
 	t := template.Must(template.New("page").Parse(tpl))
 	_ = t.Execute(w, pageData{Title: title, Body: body})
 }
@@ -45,6 +45,7 @@ func (s *Server) Routes() http.Handler {
 	mux.HandleFunc("/subscriptions/new", s.auth(s.handleNewSubscription))
 	mux.HandleFunc("/subscriptions/delete", s.auth(s.handleDeleteSubscription))
 	mux.HandleFunc("/credentials", s.auth(s.handleCredentials))
+	mux.HandleFunc("/test-push", s.auth(s.handleTestPush))
 	return mux
 }
 
@@ -96,9 +97,26 @@ func (s *Server) handleCredentials(w http.ResponseWriter, r *http.Request) {
 	}
 	sites := []string{"linuxdo","nodeseek","nodeloc"}
 	var sb strings.Builder
+	sb.WriteString(`<div class="card"><b>说明：</b><span class="muted">在这里填站点 Cookie / Headers JSON，RSS 请求会自动携带。</span></div>`)
 	for _, site := range sites {
 		cred, _ := s.Store.GetSiteCredential(site)
-		sb.WriteString(fmt.Sprintf(`<div class="card"><h3>%s</h3><form method="post"><input type="hidden" name="site" value="%s"><label>Cookie</label><textarea name="cookie" rows="4">%s</textarea><label>Headers JSON</label><textarea name="headers_json" rows="4">%s</textarea><button type="submit">保存</button></form></div>`, site, site, template.HTMLEscapeString(cred.Cookie), template.HTMLEscapeString(cred.HeadersJSON)))
+		status := "未配置"
+		if strings.TrimSpace(cred.Cookie) != "" || strings.TrimSpace(cred.HeadersJSON) != "{}" { status = "已配置" }
+		sb.WriteString(fmt.Sprintf(`<div class="card"><h3>%s <span class="ok">%s</span></h3><form method="post"><input type="hidden" name="site" value="%s"><label>Cookie</label><textarea name="cookie" rows="5">%s</textarea><label>Headers JSON</label><textarea name="headers_json" rows="5">%s</textarea><button type="submit">保存</button></form></div>`, site, status, site, template.HTMLEscapeString(cred.Cookie), template.HTMLEscapeString(cred.HeadersJSON)))
 	}
 	render(w, "站点登录配置", template.HTML(sb.String()))
+}
+
+func (s *Server) handleTestPush(w http.ResponseWriter, r *http.Request) {
+	body := template.HTML(`<form method="post"><label>测试消息</label><textarea name="message" rows="5">forum-watch-bot 测试推送</textarea><button type="submit">发送到频道</button></form>`)
+	if r.Method == http.MethodGet { render(w, "测试推送", body); return }
+	_ = r.ParseForm()
+	msg := r.FormValue("message")
+	if msg == "" { msg = "forum-watch-bot 测试推送" }
+	url := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", s.Config.Telegram.BotToken)
+	resp, err := http.PostForm(url, map[string][]string{"chat_id": {fmt.Sprintf("%d", s.Config.Telegram.PushChannelID)}, "text": {msg}, "parse_mode": {"HTML"}})
+	if err != nil { render(w, "测试推送失败", template.HTML(template.HTMLEscapeString(err.Error()))); return }
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 { render(w, "测试推送失败", template.HTML(fmt.Sprintf("telegram status: %d", resp.StatusCode))); return }
+	render(w, "测试推送", template.HTML(`<div class="card ok">测试推送已发送，请检查频道。</div>`+string(body)))
 }
